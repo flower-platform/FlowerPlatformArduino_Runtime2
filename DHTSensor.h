@@ -8,6 +8,7 @@
 #include <Arduino.h>
 #include <dht.h>
 #include <FlowerPlatformArduinoRuntime.h>
+#include <HardwareSerial.h>
 #include <stddef.h>
 #include <stdint.h>
 
@@ -26,8 +27,9 @@ public:
 
 	void setup() {
 		lastTime = 0;
-		previousTemperature = -1000;
 		previousHumidity = -1000;
+		previousTemperature = -1000;
+		pinMode(pin, INPUT);
 
 		this->dhtSensorInstance = new dht();
 		if (pollInterval < 0) {
@@ -36,7 +38,6 @@ public:
 	}
 
 	void loop() {
-
 		if ((unsigned long int)(millis() - lastTime) < pollInterval) {
 			return;
 		}
@@ -49,17 +50,17 @@ public:
 			ValueChangedEvent event;
 			event.currentValue = currentTemperature;
 			event.previousValue = previousTemperature;
-			previousTemperature = currentTemperature;
 			temperatureChangedListener->handleEvent(&event);
 		}
+		previousTemperature = currentTemperature;
 
 		if (currentHumidity != previousHumidity && humidityChangedListener != NULL) {
 			ValueChangedEvent event;
 			event.currentValue = currentHumidity;
 			event.previousValue = previousHumidity;
-			previousHumidity = currentHumidity;
 			humidityChangedListener->handleEvent(&event);
 		}
+		previousHumidity = currentHumidity;
 	}
 
 	void check(int pin) {

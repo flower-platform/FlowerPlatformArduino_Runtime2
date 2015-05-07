@@ -1,34 +1,38 @@
-#ifndef Logger_h
-#define Logger_h
+#ifndef LoggerSdFat_h
+#define LoggerSdFat_h
 
 #include <Arduino.h>
+#include <FatApiConstants.h>
+#include <FatFile.h>
 #include <HardwareSerial.h>
 #include <pins_arduino.h>
 #include <stdint.h>
-#include <SD.h>
+#include <SdFat.h>
 
 
-class Logger {
+class LoggerSdFat {
 protected:
 	unsigned long lastTimestamp;
 
+	SdFat sd;
+
+	SdFile file;
+
 public:
 
-//	String channelName;
-
-	char* fileName;
+	const char* fileName;
 
 	unsigned long timeInterval;
 
-	Logger(uint8_t chipSelectPin) {
+	LoggerSdFat(uint8_t chipSelectPin, const char* fileName) {
 		lastTimestamp = 0;
-		fileName = "logger.txt";
-		timeInterval = 60 * 1000;
+		this->fileName = fileName;
+		timeInterval = 60 * 1000L;
 		pinMode(SS, OUTPUT);
 		digitalWrite(SS, HIGH);
 		pinMode(chipSelectPin, OUTPUT);
 		pinMode(chipSelectPin, HIGH);
-		SD.begin(chipSelectPin);
+		sd.begin(chipSelectPin);
 	}
 
 	void log(int value) {
@@ -36,17 +40,17 @@ public:
 		if (t < lastTimestamp + timeInterval) {
 			return;
 		}
-		File file = SD.open(fileName, FILE_WRITE);
-		if (file) {
+		if (file.open(fileName, O_CREAT | O_WRITE)) {
 			file.print(t);
 			file.print(",");
 			file.println(value);
 			file.close();
+
+			Serial.print("LOG ");
+			Serial.print(t);
+			Serial.print(",");
+			Serial.println(value);
 		}
-		Serial.print("LOG ");
-		Serial.print(t);
-		Serial.print(",");
-		Serial.println(value);
 	}
 
 /*
