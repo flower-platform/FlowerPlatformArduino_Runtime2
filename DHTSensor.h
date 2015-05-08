@@ -18,20 +18,21 @@ public:
 	Listener* temperatureChangedListener = NULL;
 	Listener* humidityChangedListener = NULL;
 
+
 	uint8_t pin;
 	unsigned int pollInterval;
 
 	virtual ~DHTSensor() {
-		delete dhtSensorInstance;
+		delete dhtSensor;
 	}
 
 	void setup() {
 		lastTime = 0;
-		previousHumidity = -1000;
-		previousTemperature = -1000;
+		lastHumidity = -1000;
+		lastTemperature = -1000;
 		pinMode(pin, INPUT);
 
-		this->dhtSensorInstance = new dht();
+		this->dhtSensor = new dht();
 		if (pollInterval < 0) {
 			pollInterval = 0;
 		}
@@ -44,38 +45,47 @@ public:
 
 		lastTime = millis();
 
-		check(pin);
+		dhtSensor->read11(pin);
 
-		if (currentTemperature != previousTemperature && temperatureChangedListener != NULL) {
+		if (dhtSensor->temperature != lastTemperature && temperatureChangedListener != NULL) {
 			ValueChangedEvent event;
-			event.currentValue = currentTemperature;
-			event.previousValue = previousTemperature;
+			event.currentValue = dhtSensor->temperature;
+			event.previousValue = lastTemperature;
 			temperatureChangedListener->handleEvent(&event);
 		}
-		previousTemperature = currentTemperature;
+		lastTemperature = dhtSensor->temperature;
 
-		if (currentHumidity != previousHumidity && humidityChangedListener != NULL) {
+		if (dhtSensor->humidity != lastHumidity && humidityChangedListener != NULL) {
 			ValueChangedEvent event;
-			event.currentValue = currentHumidity;
-			event.previousValue = previousHumidity;
+			event.currentValue = dhtSensor->humidity;
+			event.previousValue = lastHumidity;
 			humidityChangedListener->handleEvent(&event);
 		}
-		previousHumidity = currentHumidity;
+		lastHumidity = dhtSensor->humidity;
 	}
 
-	void check(int pin) {
-		dhtSensorInstance->read11(pin);
-		currentTemperature =  dhtSensorInstance->temperature;
-		currentHumidity = dhtSensorInstance->humidity;
+	void printStateAsJson(const __FlashStringHelper* instanceName, Print* print) {
+		print->print(F("\""));
+		print->print(instanceName);
+		print->print(F("_temperature"));
+		print->print(F("\":"));
+		print->print(lastTemperature);
+
+		print->print(F(","));
+
+		print->print(F("\""));
+		print->print(instanceName);
+		print->print(F("_humidity"));
+		print->print(F("\":"));
+		print->print(lastHumidity);
 	}
+
 
 protected:
-	dht* dhtSensorInstance;
+	dht* dhtSensor;
 	unsigned long lastTime;
-	double currentTemperature;
-	double currentHumidity;
-	double previousTemperature;
-	double previousHumidity;
+	double lastTemperature;
+	double lastHumidity;
 };
 
 /*

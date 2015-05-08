@@ -13,19 +13,25 @@
 
 class Output {
 protected:
-	uint8_t pin;
 	int lastValue;
 
 public:
+	uint8_t pin;
 
 	Listener* valueChangedListener = NULL;
 
 	bool isPwm = false;
 
-	Output(uint8_t pin) {
-		this->pin = pin;
+	void setup() {
 	    pinMode(pin, OUTPUT);
 	    lastValue = -1;
+	}
+
+	void printStateAsJson(const __FlashStringHelper* instanceName, Print* print) {
+		print->print(F("\""));
+		print->print(instanceName);
+		print->print(F("\": "));
+		print->print(lastValue);
 	}
 
 	void setHigh() {

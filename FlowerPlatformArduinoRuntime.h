@@ -41,6 +41,24 @@ public:
 
 };
 
+int freeRam() {
+	extern int __heap_start, *__brkval;
+	int v;
+	return (int) &v - (__brkval == 0 ? (int) &__heap_start : (int) __brkval);
+}
+
+//	int freeRam() {
+//		 int size = 8192; // Use 2048 with ATmega328
+//		  byte *buf;
+//
+//		  while ((buf = (byte *) malloc(--size)) == NULL) ;
+//
+//		  free(buf);
+//
+//		  return size;
+//	}
+
+
 /*
 class DataChangedEvent : public Event {
 	public:

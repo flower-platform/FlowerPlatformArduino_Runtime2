@@ -32,15 +32,18 @@ public:
 
 class HttpServer {
 public:
+	static const int CONTENT_TYPE_JSON = 0;
+
+	static const int CONTENT_TYPE_HTML = 1;
 
 	Listener* commandReceivedListener = NULL;
+
+	int port;
 
 	void setup() {
 		// set SD chip select pin to HIGH
 //		pinMode(4, OUTPUT);
 //		digitalWrite(4, HIGH);
-
-		port = 80;
 
 		static uint8_t mac[] = { 0xDE, 0xAD, 0xBE, 0xEF, 0xFE, 0xED };
 		static uint8_t ip[] = { 192, 168, 100, 253 };
@@ -96,9 +99,9 @@ public:
 		}
 	}
 
-	void httpSuccess(const char* contentType) {
+	void httpSuccess(int contentType = CONTENT_TYPE_JSON) {
 		activeClient->println(F("HTTP/1.1 200 OK"));
-		activeClient->print(F("Content-Type: ")); activeClient->println(contentType);
+		activeClient->print(F("Content-Type: ")); activeClient->println(contentType == 1 ? F("text/html") : F("application/json"));
 		activeClient->println(F("Access-Control-Allow-Origin: *"));
 		activeClient->println(F("Connection: close"));  // the connection will be closed after completion of the response
 		activeClient->println();
@@ -124,8 +127,6 @@ public:
 
 
 protected:
-
-	int port;
 
 	EthernetServer* server;
 

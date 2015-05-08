@@ -24,7 +24,7 @@ public:
 		if (!isAnalog) {
 			digitalWrite(pin, HIGH);
 		}
-		lastValue = -1;
+		lastValue = 2;
 	}
 
 	void loop() {
@@ -47,6 +47,13 @@ public:
 
 		lastValue = value;
 
+	}
+
+	void printStateAsJson(const __FlashStringHelper* instanceName, Print* print) {
+		print->print(F("\""));
+		print->print(instanceName);
+		print->print(F("\":"));
+		print->print(lastValue);
 	}
 
 };

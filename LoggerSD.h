@@ -2,8 +2,8 @@
 #define LoggerSD_h
 
 #include <Arduino.h>
-#include <HardwareSerial.h>
 #include <pins_arduino.h>
+#include <stdbool.h>
 #include <stdint.h>
 #include <SD.h>
 #include <WString.h>
@@ -15,7 +15,7 @@ protected:
 
 public:
 
-//	String channelName;
+	uint8_t slaveSelectPin;
 
 	const char* fileName;
 
@@ -25,15 +25,14 @@ public:
 
 	T lastValue;
 
-	LoggerSD(uint8_t chipSelectPin, const char* fileName) {
+	void setup() {
 		lastTimestamp = 0;
-		this->fileName = fileName;
 		timeInterval = 60 * 1000L;
 		valueReady = false;
 		pinMode(SS, OUTPUT);
-		pinMode(chipSelectPin, OUTPUT);
-		pinMode(chipSelectPin, HIGH);
-		SD.begin(chipSelectPin);
+		pinMode(slaveSelectPin, OUTPUT);
+		pinMode(slaveSelectPin, HIGH);
+		SD.begin(slaveSelectPin);
 	}
 
 	void loop() {
@@ -50,17 +49,12 @@ public:
 			file.print(F(","));
 			file.println(lastValue);
 			file.close();
-
-			Serial.print(F("LOG "));
-			Serial.print(t);
-			Serial.print(",");
-			Serial.println(lastValue);
 		}
 
 	}
 
 	void log(T value) {
-		Serial.print(F("Logging... ")); Serial.print(value); Serial.print(" "); Serial.println(fileName);
+//		Serial.print(F("Logging... ")); Serial.print(value); Serial.print(" "); Serial.println(fileName);
 		lastValue = value;
 		valueReady = true;
 	}
