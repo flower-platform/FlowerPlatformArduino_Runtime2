@@ -27,9 +27,12 @@ public:
 
 	void setup() {
 		lastTimestamp = 0;
-		timeInterval = 60 * 1000L;
+		if (timeInterval == 0) {
+			timeInterval = 60 * 1000L;
+		}
 		valueReady = false;
 		pinMode(SS, OUTPUT);
+		pinMode(SS, HIGH);
 		pinMode(slaveSelectPin, OUTPUT);
 		pinMode(slaveSelectPin, HIGH);
 		SD.begin(slaveSelectPin);
@@ -44,12 +47,15 @@ public:
 		lastTimestamp = t;
 
 		File file = SD.open(fileName, FILE_WRITE);
+//		Serial.print(F("Writting... ")); Serial.print(lastValue); Serial.print(" "); Serial.println(fileName);
 		if (file) {
 			file.print(t);
 			file.print(F(","));
 			file.println(lastValue);
 			file.close();
+//			Serial.println(F("Written"));
 		}
+		valueReady = false;
 
 	}
 

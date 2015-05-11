@@ -22,17 +22,12 @@ public:
 	uint8_t pin;
 	unsigned int pollInterval;
 
-	virtual ~DHTSensor() {
-		delete dhtSensor;
-	}
-
 	void setup() {
 		lastTime = 0;
 		lastHumidity = -1000;
 		lastTemperature = -1000;
 		pinMode(pin, INPUT);
 
-		this->dhtSensor = new dht();
 		if (pollInterval < 0) {
 			pollInterval = 0;
 		}
@@ -45,23 +40,23 @@ public:
 
 		lastTime = millis();
 
-		dhtSensor->read11(pin);
+		dhtSensor.read11(pin);
 
-		if (dhtSensor->temperature != lastTemperature && temperatureChangedListener != NULL) {
+		if (dhtSensor.temperature != lastTemperature && temperatureChangedListener != NULL) {
 			ValueChangedEvent event;
-			event.currentValue = dhtSensor->temperature;
+			event.currentValue = dhtSensor.temperature;
 			event.previousValue = lastTemperature;
 			temperatureChangedListener->handleEvent(&event);
 		}
-		lastTemperature = dhtSensor->temperature;
+		lastTemperature = dhtSensor.temperature;
 
-		if (dhtSensor->humidity != lastHumidity && humidityChangedListener != NULL) {
+		if (dhtSensor.humidity != lastHumidity && humidityChangedListener != NULL) {
 			ValueChangedEvent event;
-			event.currentValue = dhtSensor->humidity;
+			event.currentValue = dhtSensor.humidity;
 			event.previousValue = lastHumidity;
 			humidityChangedListener->handleEvent(&event);
 		}
-		lastHumidity = dhtSensor->humidity;
+		lastHumidity = dhtSensor.humidity;
 	}
 
 	void printStateAsJson(const __FlashStringHelper* instanceName, Print* print) {
@@ -82,7 +77,7 @@ public:
 
 
 protected:
-	dht* dhtSensor;
+	dht dhtSensor;
 	unsigned long lastTime;
 	double lastTemperature;
 	double lastHumidity;

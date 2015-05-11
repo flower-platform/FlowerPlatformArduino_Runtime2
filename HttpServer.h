@@ -22,7 +22,7 @@ class HttpServer;
 class HttpCommandEvent : public Event {
 public:
 
-	const char* command;
+	const char* url;
 
 	HttpServer* server;
 
@@ -101,7 +101,7 @@ public:
 
 	void httpSuccess(int contentType = CONTENT_TYPE_JSON) {
 		activeClient->println(F("HTTP/1.1 200 OK"));
-		activeClient->print(F("Content-Type: ")); activeClient->println(contentType == 1 ? F("text/html") : F("application/json"));
+		activeClient->print(F("Content-Type: ")); activeClient->println(contentType == CONTENT_TYPE_HTML ? F("text/html") : F("application/json"));
 		activeClient->println(F("Access-Control-Allow-Origin: *"));
 		activeClient->println(F("Connection: close"));  // the connection will be closed after completion of the response
 		activeClient->println();
@@ -118,11 +118,39 @@ public:
 		}
 
 		HttpCommandEvent event;
-		event.command = requestUrl;
+		event.url = requestUrl;
 		event.server = this;
 		event.client = client;
 		commandReceivedListener->handleEvent(&event);
 
+	}
+
+	void getCommandFromUrl(const char* url, char* command) {
+		char* p = strchr(url, '?');
+		if (p == NULL) {
+			strcpy(command, url);
+		} else {
+			uint8_t n = p - url;
+			strncpy(command, url, n);
+			command[n] = '\0';
+		}
+	}
+
+	void getParameterValueFromUrl(const char* url, const char* param, char* value) {
+		char* st = strstr_P(url, param); // look for param string start in url
+		if (st != NULL) {
+			st = strchr(st, '=') + 1; // look for value start
+			char* en = strchr(st, '&'); // look for end of value string
+			if (en == NULL) {
+				strcpy(value, st);
+			} else {
+				uint8_t n = en - st;
+				strncpy(value, st, n);
+				value[n] = '\0';
+			}
+		} else {
+			value[0]='\0';
+		}
 	}
 
 
