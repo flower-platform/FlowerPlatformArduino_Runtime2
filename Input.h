@@ -14,7 +14,7 @@ protected:
 
 public:
 
-	Listener* valueChangedListener = NULL;
+	Listener* onValueChanged = NULL;
 
 	uint8_t pin;
 	bool isAnalog = false;
@@ -38,11 +38,11 @@ public:
 	    	return;
 	    }
 
-		if (valueChangedListener != NULL) {
+		if (onValueChanged != NULL) {
 			ValueChangedEvent event;
 			event.previousValue = lastValue;
 			event.currentValue = value;
-			valueChangedListener->handleEvent(&event);
+			onValueChanged->handleEvent(&event);
 		}
 
 		lastValue = value;

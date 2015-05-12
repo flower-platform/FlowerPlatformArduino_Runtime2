@@ -19,8 +19,8 @@ protected:
 	unsigned long lastTimestamp;
 
 public:
-	Listener* timerListener = NULL;
-	Listener* timerCompleteListener = NULL;
+	Listener* onTimer = NULL;
+	Listener* onTimerComplete = NULL;
 
 	unsigned int currentCount;
 
@@ -49,13 +49,13 @@ public:
 			currentCount++;
 
 			TimerEvent event;
-			if (timerListener != NULL) {
-				timerListener->handleEvent(&event);
+			if (onTimer != NULL) {
+				onTimer->handleEvent(&event);
 			}
 
 			if (repeatCount > 0 && currentCount == repeatCount) {
-				if (timerCompleteListener != NULL) {
-					timerCompleteListener->handleEvent(&event);
+				if (onTimerComplete != NULL) {
+					onTimerComplete->handleEvent(&event);
 				}
 				autostart = false;
 			}

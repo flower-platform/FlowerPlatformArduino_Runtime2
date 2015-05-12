@@ -36,7 +36,7 @@ public:
 
 	static const int CONTENT_TYPE_HTML = 1;
 
-	Listener* commandReceivedListener = NULL;
+	Listener* onCommandReceived = NULL;
 
 	int port;
 
@@ -113,7 +113,7 @@ public:
 		Serial.print(F("HttpServer.dispatchEvent: ")); Serial.print(requestMethod); Serial.print(F(" * ")); Serial.print(requestUrl); Serial.println();
 		#endif
 
-		if (commandReceivedListener == NULL) {
+		if (onCommandReceived == NULL) {
 			return;
 		}
 
@@ -121,7 +121,7 @@ public:
 		event.url = requestUrl;
 		event.server = this;
 		event.client = client;
-		commandReceivedListener->handleEvent(&event);
+		onCommandReceived->handleEvent(&event);
 
 	}
 

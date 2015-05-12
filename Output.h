@@ -18,7 +18,7 @@ protected:
 public:
 	uint8_t pin;
 
-	Listener* valueChangedListener = NULL;
+	Listener* onValueChanged = NULL;
 
 	bool isPwm = false;
 
@@ -55,11 +55,11 @@ public:
 			digitalWrite(pin, value);
 		}
 
-		if (valueChangedListener != NULL) {
+		if (onValueChanged != NULL) {
 			ValueChangedEvent event;
 			event.previousValue = lastValue;
 			event.currentValue = value;
-			valueChangedListener->handleEvent(&event);
+			onValueChanged->handleEvent(&event);
 		}
 
 		lastValue = value;

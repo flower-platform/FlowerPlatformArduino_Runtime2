@@ -15,9 +15,8 @@
 class DHTSensor {
 public:
 
-	Listener* temperatureChangedListener = NULL;
-	Listener* humidityChangedListener = NULL;
-
+	Listener* onTemperatureChanged = NULL;
+	Listener* onHumidityChanged = NULL;
 
 	uint8_t pin;
 	unsigned int pollInterval;
@@ -28,8 +27,8 @@ public:
 		lastTemperature = -1000;
 		pinMode(pin, INPUT);
 
-		if (pollInterval < 0) {
-			pollInterval = 0;
+		if (pollInterval <= 0) {
+			pollInterval = 1000;
 		}
 	}
 
@@ -42,19 +41,19 @@ public:
 
 		dhtSensor.read11(pin);
 
-		if (dhtSensor.temperature != lastTemperature && temperatureChangedListener != NULL) {
+		if (dhtSensor.temperature != lastTemperature && onTemperatureChanged != NULL) {
 			ValueChangedEvent event;
 			event.currentValue = dhtSensor.temperature;
 			event.previousValue = lastTemperature;
-			temperatureChangedListener->handleEvent(&event);
+			onTemperatureChanged->handleEvent(&event);
 		}
 		lastTemperature = dhtSensor.temperature;
 
-		if (dhtSensor.humidity != lastHumidity && humidityChangedListener != NULL) {
+		if (dhtSensor.humidity != lastHumidity && onHumidityChanged != NULL) {
 			ValueChangedEvent event;
 			event.currentValue = dhtSensor.humidity;
 			event.previousValue = lastHumidity;
-			humidityChangedListener->handleEvent(&event);
+			onHumidityChanged->handleEvent(&event);
 		}
 		lastHumidity = dhtSensor.humidity;
 	}
