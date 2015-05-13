@@ -40,15 +40,19 @@ public:
 
 	int port;
 
+	uint8_t ipAddress[4];
+
+	uint8_t macAddress[6];
+
 	void setup() {
 		// set SD chip select pin to HIGH
 //		pinMode(4, OUTPUT);
 //		digitalWrite(4, HIGH);
 
-		static uint8_t mac[] = { 0xDE, 0xAD, 0xBE, 0xEF, 0xFE, 0xED };
-		static uint8_t ip[] = { 192, 168, 100, 253 };
+//		static uint8_t mac[] = { 0xDE, 0xAD, 0xBE, 0xEF, 0xFE, 0xED };
+//		static uint8_t ip[] = { 192, 168, 100, 253 };
 
-		Ethernet.begin(mac, ip);
+		Ethernet.begin(macAddress, ipAddress);
 		this->server = new EthernetServer(this->port);
 	}
 

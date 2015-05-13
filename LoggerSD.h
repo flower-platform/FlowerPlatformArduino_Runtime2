@@ -12,6 +12,8 @@
 template <class T> class LoggerSD {
 protected:
 	unsigned long lastTimestamp;
+	bool valueReady;
+	T lastValue;
 
 public:
 
@@ -20,10 +22,6 @@ public:
 	const char* fileName;
 
 	unsigned long timeInterval;
-
-	bool valueReady;
-
-	T lastValue;
 
 	void setup() {
 		lastTimestamp = 0;

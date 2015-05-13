@@ -28,21 +28,17 @@ public:
 
 	unsigned int repeatCount;
 
-	bool autostart;
+	bool autoStart;
 
 	void setup() {
-		repeatCount = 0;
-		lastTimestamp = 0;
-		currentCount = 0;
-		delay = 1000;
 	}
 
 	void loop() {
-		if (!autostart) {
+		if (!autoStart) {
 			return;
 		}
 		if (repeatCount > 0 && currentCount > repeatCount) {
-			autostart = false;
+			autoStart = false;
 			return;
 		}
 		if (millis() > lastTimestamp + delay) {
@@ -57,7 +53,7 @@ public:
 				if (onTimerComplete != NULL) {
 					onTimerComplete->handleEvent(&event);
 				}
-				autostart = false;
+				autoStart = false;
 			}
 			lastTimestamp = millis();
 		}
@@ -65,17 +61,17 @@ public:
 	}
 
 	void reset() {
-		autostart = false;
+		autoStart = false;
 		currentCount = 0;
 	}
 
 	void start() {
 		lastTimestamp = millis();
-		autostart = true;
+		autoStart = true;
 	}
 
 	void stop() {
-		autostart = false;
+		autoStart = false;
 	}
 
 };
