@@ -111,6 +111,12 @@ public:
 		activeClient->println();
 	}
 
+	void httpError404() {
+		activeClient->println(F("HTTP/1.1 404 Not Found"));
+		activeClient->println(F("Connection: close"));  // the connection will be closed after completion of the response
+		activeClient->println();
+	}
+
 	void dispatchEvent(const char* requestMethod, const char* requestUrl, EthernetClient* client) {
 
 		#if DEBUG_HTTP_SERVER > 0
