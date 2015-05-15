@@ -7,10 +7,12 @@
 
 #include <Arduino.h>
 #include <dht.h>
-#include <FlowerPlatformArduinoRuntime.h>
-#include <HardwareSerial.h>
+#include <Print.h>
 #include <stddef.h>
 #include <stdint.h>
+#include <WString.h>
+
+
 
 class DHTSensor {
 public:
@@ -59,6 +61,7 @@ public:
 	}
 
 	void printStateAsJson(const __FlashStringHelper* instanceName, Print* print) {
+
 		print->print(F("\""));
 		print->print(instanceName);
 		print->print(F("_temperature"));

@@ -5,6 +5,14 @@
 #ifndef HttpServer_h
 #define HttpServer_h
 
+#ifdef DEBUG_HttpServer
+#define DB_P_HttpServer(text) Serial.print(text)
+#define DB_PLN_HttpServer(text) Serial.println(text)
+#else
+#define DB_P_HttpServer(text)
+#define DB_PLN_HttpServer(text)
+#endif
+
 #include <Arduino.h>
 #include <Ethernet.h>
 #include <EthernetServer.h>
@@ -13,7 +21,6 @@
 #include <string.h>
 #include <WString.h>
 
-#define DEBUG_HTTP_SERVER 0
 
 #define LINE_BUFFER_SIZE 64
 
@@ -72,9 +79,7 @@ public:
 					if (c == '\n') {
 						currentLine[currentLineSize] = '\0';
 
-						#if DEBUG_HTTP_SERVER > 0
-						Serial.print(F(">> ")); Serial.println(currentLine);
-						#endif
+						DB_P_HttpServer(F(">> ")); DB_PLN_HttpServer(currentLine);
 
 						if (currentLineSize == 0) {
 							break;

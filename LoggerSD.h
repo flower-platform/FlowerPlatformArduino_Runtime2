@@ -8,6 +8,13 @@
 #include <SD.h>
 #include <WString.h>
 
+#ifdef DEBUG_LoggerSD
+#define DB_P_LoggerSD(text) Serial.print(text)
+#define DB_PLN_LoggerSD(text) Serial.println(text)
+#else
+#define DB_P_LoggerSD(text)
+#define DB_PLN_LoggerSD(text)
+#endif
 
 template <class T> class LoggerSD {
 protected:
@@ -44,21 +51,21 @@ public:
 
 		lastTimestamp = t;
 
+		DB_P_LoggerSD(F("Writting... ")); DB_P_LoggerSD(lastValue); DB_P_LoggerSD(F(" to ")); DB_PLN_LoggerSD(fileName);
 		File file = SD.open(fileName, FILE_WRITE);
-//		Serial.print(F("Writting... ")); Serial.print(lastValue); Serial.print(" "); Serial.println(fileName);
 		if (file) {
 			file.print(t);
 			file.print(F(","));
 			file.println(lastValue);
 			file.close();
-//			Serial.println(F("Written"));
+			DB_PLN_LoggerSD(F("Written"));
 		}
 		valueReady = false;
 
 	}
 
 	void log(T value) {
-//		Serial.print(F("Logging... ")); Serial.print(value); Serial.print(" "); Serial.println(fileName);
+		DB_P_LoggerSD(F("Logging... ")); DB_P_LoggerSD(value); DB_P_LoggerSD(F(" ")); DB_PLN_LoggerSD(fileName);
 		lastValue = value;
 		valueReady = true;
 	}
