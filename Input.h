@@ -17,14 +17,15 @@ public:
 	Listener* onValueChanged = NULL;
 
 	uint8_t pin;
+	bool internalPullUp = false;
 	bool isAnalog = false;
 
 	void setup() {
 		pinMode(pin, INPUT);
-		if (!isAnalog) {
+		if (internalPullUp) {
 			digitalWrite(pin, HIGH);
 		}
-		lastValue = 2;
+		lastValue = -1;
 	}
 
 	void loop() {
