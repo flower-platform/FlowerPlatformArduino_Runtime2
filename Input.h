@@ -2,23 +2,26 @@
 #define Input_h
 
 #include <Arduino.h>
-#include <FlowerPlatformArduinoRuntime.h>
 #include <stdbool.h>
 #include <stddef.h>
 #include <stdint.h>
 
 
+
 class Input {
 protected:
 	int lastValue;
+	unsigned long lastTime;
 
 public:
 
 	Listener* onValueChanged = NULL;
 
 	uint8_t pin;
+	int pollInterval = 200;
 	bool internalPullUp = false;
 	bool isAnalog = false;
+
 
 	void setup() {
 		pinMode(pin, INPUT);
@@ -38,6 +41,9 @@ public:
 		if (value == lastValue) {
 	    	return;
 	    }
+		if (!isAnalog && (unsigned long int)(millis() - lastTime) < pollInterval) {
+			return;
+		}
 
 		if (onValueChanged != NULL) {
 			ValueChangedEvent event;
@@ -47,6 +53,10 @@ public:
 		}
 
 		lastValue = value;
+
+		if (!isAnalog) {
+			lastTime = millis();
+		}
 
 	}
 
