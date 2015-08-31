@@ -17,6 +17,7 @@ protected:
 
 public:
 	uint8_t pin;
+	uint8_t initialValue = LOW;
 
 	Listener* onValueChanged = NULL;
 
@@ -24,6 +25,7 @@ public:
 
 	void setup() {
 	    pinMode(pin, OUTPUT);
+		digitalWrite(pin, initialValue);
 	    lastValue = -1;
 	}
 
