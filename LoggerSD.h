@@ -36,10 +36,10 @@ public:
 			timeInterval = 60 * 1000L;
 		}
 		valueReady = false;
-		pinMode(SS, OUTPUT);
-		pinMode(SS, HIGH);
-		pinMode(slaveSelectPin, OUTPUT);
-		pinMode(slaveSelectPin, HIGH);
+//		pinMode(SS, OUTPUT);
+//		digitalWrite(SS, HIGH);
+//		pinMode(slaveSelectPin, OUTPUT);
+//		digitalWrite(slaveSelectPin, HIGH);
 		SD.begin(slaveSelectPin);
 	}
 
