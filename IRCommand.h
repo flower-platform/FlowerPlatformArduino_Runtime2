@@ -5,15 +5,9 @@
 #ifndef IRCommand_h
 #define IRCommand_h
 
-#include <ArduinoFiles.h>
-#include <FatFileSystem.h>
 #include <IRremote.h>
-#include <stdlib.h>
 #include <SdFat.h>
 
-/**
- * Uses pin 2 for PWM
- */
 class IRCommand {
 protected:
 	SdFat SD;
@@ -51,6 +45,7 @@ public:
 		}
 		f.close();
 //		Serial.println(n);
+
 		// send through IR led
 		IRsend irsend;
 		const int khz = 38;

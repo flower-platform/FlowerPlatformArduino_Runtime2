@@ -5,10 +5,6 @@
 #ifndef IRLearner_h
 #define IRLearner_h
 
-#include <Arduino.h>
-#include <HardwareSerial.h>
-#include <stdbool.h>
-#include <stdint.h>
 #include <SdFat.h>
 
 #define RESOLUTION 80
@@ -24,7 +20,7 @@ protected:
 
 public:
 	const char* name;
-	uint8_t pin; // must be within [0..7]
+	uint8_t pin; // must be within [0..7] (PIND register is used)
 
 	void setup() {
 		SD.begin(4);
