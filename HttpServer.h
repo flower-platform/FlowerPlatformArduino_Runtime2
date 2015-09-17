@@ -146,7 +146,7 @@ public:
 	}
 
 	void getParameterValueFromUrl(const char* url, const char* param, char* value) {
-		char* st = strstr_P(url, param); // look for param string start in url
+		char* st = strstr(url, param); // look for param string start in url
 		if (st != NULL) {
 			st = strchr(st, '=') + 1; // look for value start
 			char* en = strchr(st, '&'); // look for end of value string
