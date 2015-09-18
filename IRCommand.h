@@ -9,17 +9,16 @@
 #include <SdFat.h>
 
 class IRCommand {
-protected:
-	SdFat SD;
-
 public:
 	const char* name;
 
 	void setup() {
-		SD.begin(4);
+		digitalWrite(4, HIGH);
 	}
 
 	void send() {
+		SdFat SD;
+		SD.begin(4);
 		SD.chdir("ir-commands", true);
 		File f = SD.open(name);
 //		Serial.println(name);

@@ -41,6 +41,7 @@ public:
 
 		lastTime = millis();
 
+		dht dhtSensor;
 		dhtSensor.read11(pin);
 
 		if (dhtSensor.temperature != lastTemperature && onTemperatureChanged != NULL) {
@@ -79,7 +80,6 @@ public:
 
 
 protected:
-	dht dhtSensor;
 	unsigned long lastTime;
 	double lastTemperature;
 	double lastHumidity;

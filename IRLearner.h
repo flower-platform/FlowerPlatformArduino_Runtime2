@@ -16,14 +16,13 @@
  */
 class IRLearner {
 protected:
-	SdFat SD;
 
 public:
 	const char* name;
 	uint8_t pin; // must be within [0..7] (PIND register is used)
 
 	void setup() {
-		SD.begin(4);
+		digitalWrite(4, HIGH);
 	}
 
 	bool capture(const char* name) {
@@ -60,6 +59,8 @@ public:
 	    }
 
 		// Write command to SD card
+		SdFat SD;
+		SD.begin(4);
 		SD.chdir(true); // set current dir to root
 	    SD.mkdir("ir-commands", false);
 	    SD.chdir("ir-commands", true);
