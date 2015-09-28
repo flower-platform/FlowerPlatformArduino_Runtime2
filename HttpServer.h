@@ -33,7 +33,7 @@ public:
 
 	HttpServer* server;
 
-	EthernetClient* client;
+	Client* client;
 
 };
 
@@ -66,44 +66,51 @@ public:
 		EthernetClient client = server->available();
 
 		if (client) {
-			char currentLine[64];
-			int currentLineSize = 0;
-			activeClient = &client;
+			processClientRequest(&client);
+		}
+	}
 
-			while (client.connected()) {
-				if (client.available()) {
-					char c = client.read();
+	void processClientRequest(Client* client) {
+		char currentLine[64];
+		int currentLineSize = 0;
+		activeClient = client;
 
-					if (c == '\n') {
-						currentLine[currentLineSize] = '\0';
+		while (client->connected()) {
+			if (client->available()) {
+				char c = client->read();
 
-						DB_P_HttpServer(F(">> ")); DB_PLN_HttpServer(currentLine);
+				if (c == '\n') {
+					currentLine[currentLineSize] = '\0';
 
-						if (currentLineSize == 0) {
-							break;
-						}
+					DB_P_HttpServer(F(">> ")); DB_PLN_HttpServer(currentLine);
 
-						if (strncmp(currentLine, "GET", 3) == 0 || strncmp(currentLine, "POST", 4 == 0)) {
-							char* k = strchr(currentLine, ' ');
-							k[0] = '\0'; // break string
-							k+=2; // skip space and leading url slash
-							char* requestUrl = k;
-							k = strchr(requestUrl, ' ');
-							k[0] = 0;
-							dispatchEvent(currentLine, requestUrl, activeClient);
-							break;
-						}
+					if (currentLineSize == 0) {
+						break;
 					}
-					else if (c != '\r' && currentLineSize < LINE_BUFFER_SIZE - 1) {
-						currentLine[currentLineSize++] = c;
+
+					if (strncmp(currentLine, "GET", 3) == 0 || strncmp(currentLine, "POST", 4 == 0)) {
+						char* k = strchr(currentLine, ' ');
+						k[0] = '\0'; // break string
+						k+=2; // skip space and leading url slash
+						char* requestUrl = k;
+						k = strchr(requestUrl, ' ');
+						k[0] = 0;
+						dispatchEvent(currentLine, requestUrl, activeClient);
+						break;
 					}
 				}
+				else if (c != '\r' && currentLineSize < LINE_BUFFER_SIZE - 1) {
+					currentLine[currentLineSize++] = c;
+				}
 			}
-
-			// give the web browser time to receive the data
-			delay(1);
-			client.stop();
 		}
+
+		// wait for client and close connection
+		long time = millis();
+		while (client->connected() && (millis() - time) < 200) {
+			delay(50);
+		}
+		client->stop();
 	}
 
 	void httpSuccess(int contentType = CONTENT_TYPE_JSON) {
@@ -120,7 +127,7 @@ public:
 		activeClient->println();
 	}
 
-	void dispatchEvent(const char* requestMethod, const char* requestUrl, EthernetClient* client) {
+	void dispatchEvent(const char* requestMethod, const char* requestUrl, Client* client) {
 
 		#if DEBUG_HTTP_SERVER > 0
 		Serial.print(F("HttpServer.dispatchEvent: ")); Serial.print(requestMethod); Serial.print(F(" * ")); Serial.print(requestUrl); Serial.println();
@@ -171,7 +178,7 @@ protected:
 
 	EthernetServer* server;
 
-	EthernetClient* activeClient;
+	Client* activeClient;
 
 };
 
