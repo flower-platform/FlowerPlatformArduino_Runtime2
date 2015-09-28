@@ -52,7 +52,8 @@ public:
 	uint8_t macAddress[6];
 
 	void setup() {
-//		pinMode(SS, OUTPUT);
+		pinMode(4, OUTPUT);
+		pinMode(4, HIGH);	// disable SPI for SD card
 		Ethernet.begin(macAddress, ipAddress);
 		this->server = new EthernetServer(this->port);
 	}
