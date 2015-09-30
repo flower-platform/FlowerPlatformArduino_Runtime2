@@ -5,6 +5,12 @@
 #ifndef HttpServer_h
 #define HttpServer_h
 
+#include <avr/pgmspace.h>
+#include <Client.h>
+#include <FlowerPlatformArduinoRuntime.h>
+#include <stdint.h>
+#include <string.h>
+
 #ifdef DEBUG_HttpServer
 #define DB_P_HttpServer(text) Serial.print(text)
 #define DB_PLN_HttpServer(text) Serial.println(text)
@@ -12,15 +18,6 @@
 #define DB_P_HttpServer(text)
 #define DB_PLN_HttpServer(text)
 #endif
-
-#include <Arduino.h>
-#include <Ethernet.h>
-#include <EthernetServer.h>
-#include <FlowerPlatformArduinoRuntime.h>
-#include <stdint.h>
-#include <string.h>
-#include <WString.h>
-
 
 #define LINE_BUFFER_SIZE 64
 
@@ -45,35 +42,20 @@ public:
 
 	Listener* onCommandReceived = NULL;
 
-	int port;
-
 	uint8_t ipAddress[4];
 
-	uint8_t macAddress[6];
+	int port;
 
 	void setup() {
-		// Disable SPI for SD card.
-		// This workaround is needed for Ethernet shield clones. The original Ethernet shield should work properly without this, but the clones don't.
-		pinMode(4, OUTPUT);
-		pinMode(4, HIGH);
 
-		Ethernet.begin(macAddress, ipAddress);
-		this->server = new EthernetServer(this->port);
-	}
-
-	void loop() {
-		// listen for incoming clients
-		EthernetClient client = server->available();
-
-		if (client) {
-			processClientRequest(&client);
-		}
 	}
 
 	void processClientRequest(Client* client) {
 		char currentLine[64];
 		int currentLineSize = 0;
 		activeClient = client;
+
+		DB_P_HttpServer("client connected");
 
 		while (client->connected()) {
 			if (client->available()) {
@@ -87,6 +69,7 @@ public:
 					if (currentLineSize == 0) {
 						break;
 					}
+					currentLineSize = 0;
 
 					if (strncmp(currentLine, "GET", 3) == 0 || strncmp(currentLine, "POST", 4 == 0)) {
 						char* k = strchr(currentLine, ' ');
@@ -105,26 +88,26 @@ public:
 			}
 		}
 
-		// wait for client and close connection
-		long time = millis();
-		while (client->connected() && (millis() - time) < 200) {
-			delay(50);
+
+		DB_PLN_HttpServer(F("closing... "));
+		// empty input buffer
+		while (client->available()) {
+			client->read();
 		}
 		client->stop();
+		DB_P_HttpServer(F("closed: ")); DB_PLN_HttpServer(client->connected());
 	}
 
 	void httpSuccess(int contentType = CONTENT_TYPE_JSON) {
-		activeClient->println(F("HTTP/1.1 200 OK"));
-		activeClient->print(F("Content-Type: ")); activeClient->println(contentType == CONTENT_TYPE_HTML ? F("text/html") : F("application/json"));
-		activeClient->println(F("Access-Control-Allow-Origin: *"));
-		activeClient->println(F("Connection: close"));  // the connection will be closed after completion of the response
-		activeClient->println();
+		write(PSTR("HTTP/1.1 200 OK\r\n"));
+		write(PSTR("Content-Type: ")); write(contentType == CONTENT_TYPE_HTML ? PSTR("text/html") : PSTR("application/json"));
+		write(PSTR("\r\nAccess-Control-Allow-Origin: *\r\n"));
+		write(PSTR("Connection: close\r\n\r\n"));  // the connection will be closed after completion of the response
 	}
 
 	void httpError404() {
-		activeClient->println(F("HTTP/1.1 404 Not Found"));
-		activeClient->println(F("Connection: close"));  // the connection will be closed after completion of the response
-		activeClient->println();
+		write(PSTR("HTTP/1.1 404 Not Found\r\n"));
+		write(PSTR("Connection: close\r\n\r\n"));  // the connection will be closed after completion of the response
 	}
 
 	void dispatchEvent(const char* requestMethod, const char* requestUrl, Client* client) {
@@ -173,10 +156,20 @@ public:
 		}
 	}
 
+	void write(const char* s) {
+		int n = strlen_P(s);
+		int k = 0;
+		char buf[64];
+		while (k < n) {
+			int l = k + 64 <= n ? 64 : n - k;
+			memcpy_P(buf, s + k, l);
+			activeClient->write((uint8_t*) buf, l);
+			k += l;
+		}
+	}
+
 
 protected:
-
-	EthernetServer* server;
 
 	Client* activeClient;
 
