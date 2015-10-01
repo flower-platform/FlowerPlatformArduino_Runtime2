@@ -26,7 +26,7 @@ public:
 	void setup() {
 	    pinMode(pin, OUTPUT);
 		digitalWrite(pin, initialValue);
-	    lastValue = -1;
+	    lastValue = initialValue;
 	}
 
 	void printStateAsJson(const __FlashStringHelper* instanceName, Print* print) {
@@ -37,16 +37,10 @@ public:
 	}
 
 	void setHigh() {
-//		if (lastValue) {
-//			return;
-//		}
 		setValue(HIGH);
 	}
 
 	void setLow() {
-//		if (!lastValue) {
-//			return;
-//		}
 		setValue(LOW);
 	}
 
