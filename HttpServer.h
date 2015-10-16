@@ -8,9 +8,12 @@
 #include <avr/pgmspace.h>
 #include <Client.h>
 #include <FlowerPlatformArduinoRuntime.h>
+#include <HardwareSerial.h>
 #include <stdint.h>
 #include <string.h>
+#include <WString.h>
 
+#define DEBUG_HttpServer
 #ifdef DEBUG_HttpServer
 #define DB_P_HttpServer(text) Serial.print(text)
 #define DB_PLN_HttpServer(text) Serial.println(text)
@@ -50,71 +53,75 @@ public:
 
 	}
 
-	void processClientRequest(Client* client) {
-		char currentLine[64];
-		int currentLineSize = 0;
+	void processClientRequest(Client* client, uint8_t clientId) {
 		activeClient = client;
 
-		DB_P_HttpServer("client connected");
+		DB_PLN_HttpServer("data received");
 
-		while (client->connected()) {
-			if (client->available()) {
-				char c = client->read();
+		if (lineBuff[clientId] == NULL) {
+			lineBuff[clientId] = new char[LINE_BUFFER_SIZE];
+			lineBuffSize[clientId] = 0;
+			DB_PLN_HttpServer("lineBuff allocated");
+		}
+		char* currentLine = lineBuff[clientId];
 
-				if (c == '\n') {
-					currentLine[currentLineSize] = '\0';
+		while (client->connected() && client->available()) {
+			char c = client->read();
+			Serial.print('*'); Serial.print(c);
+			if (c == '\n') {
+				currentLine[lineBuffSize[clientId]] = '\0';
 
-					DB_P_HttpServer(F(">> ")); DB_PLN_HttpServer(currentLine);
+				DB_P_HttpServer(F(">> ")); DB_PLN_HttpServer(currentLine);
 
-					if (currentLineSize == 0) {
-						break;
+				lineBuffSize[clientId] = 0;
+
+				if (strncmp(currentLine, "GET", 3) == 0 || strncmp(currentLine, "POST", 4 == 0)) {
+					// empty input buffer
+					while (client->available()) {
+						client->read();
 					}
-					currentLineSize = 0;
-
-					if (strncmp(currentLine, "GET", 3) == 0 || strncmp(currentLine, "POST", 4 == 0)) {
-						char* k = strchr(currentLine, ' ');
-						k[0] = '\0'; // break string
-						k+=2; // skip space and leading url slash
-						char* requestUrl = k;
-						k = strchr(requestUrl, ' ');
-						k[0] = 0;
-						dispatchEvent(currentLine, requestUrl, activeClient);
-						break;
-					}
+					char* k = strchr(currentLine, ' ');
+					k[0] = '\0'; // break string
+					k+=2; // skip space and leading url slash
+					char* requestUrl = k;
+					k = strchr(requestUrl, ' ');
+					k[0] = 0;
+					DB_PLN_HttpServer(F("httpserver dispatch... "));
+					dispatchEvent(currentLine, requestUrl, activeClient);
+					delete lineBuff[clientId];
+					lineBuff[clientId] = NULL;
+					break;
 				}
-				else if (c != '\r' && currentLineSize < LINE_BUFFER_SIZE - 1) {
-					currentLine[currentLineSize++] = c;
-				}
+			}
+			else if (c != '\r' && lineBuffSize[clientId] < LINE_BUFFER_SIZE - 1) {
+				currentLine[lineBuffSize[clientId]++] = c;
 			}
 		}
 
 
-		DB_PLN_HttpServer(F("closing... "));
-		// empty input buffer
-		while (client->available()) {
-			client->read();
+		if (lineBuff[clientId] == NULL) {
+			DB_PLN_HttpServer(F("closing... "));
+			// empty input buffer
+			while (client->available()) {
+				client->read();
+			}
+			client->stop();
+			DB_P_HttpServer(F("closed: ")); DB_PLN_HttpServer(client->connected());
 		}
-		client->stop();
-		DB_P_HttpServer(F("closed: ")); DB_PLN_HttpServer(client->connected());
 	}
 
 	void httpSuccess(int contentType = CONTENT_TYPE_JSON) {
-		write(PSTR("HTTP/1.1 200 OK\r\n"));
-		write(PSTR("Content-Type: ")); write(contentType == CONTENT_TYPE_HTML ? PSTR("text/html") : PSTR("application/json"));
-		write(PSTR("\r\nAccess-Control-Allow-Origin: *\r\n"));
-		write(PSTR("Connection: close\r\n\r\n"));  // the connection will be closed after completion of the response
+		write_P(activeClient, PSTR("HTTP/1.1 200 OK\r\nContent-Type: ")); write_P(activeClient, contentType == CONTENT_TYPE_HTML ? PSTR("text/html") : PSTR("application/json"));
+		write_P(activeClient, PSTR("\r\nAccess-Control-Allow-Origin: *\r\nConnection: close\r\n\r\n"));  // the connection will be closed after completion of the response
 	}
 
 	void httpError404() {
-		write(PSTR("HTTP/1.1 404 Not Found\r\n"));
-		write(PSTR("Connection: close\r\n\r\n"));  // the connection will be closed after completion of the response
+		write_P(activeClient, PSTR("HTTP/1.1 404 Not Found\r\nConnection: close\r\n\r\n"));  // the connection will be closed after completion of the response
 	}
 
 	void dispatchEvent(const char* requestMethod, const char* requestUrl, Client* client) {
 
-		#if DEBUG_HTTP_SERVER > 0
-		Serial.print(F("HttpServer.dispatchEvent: ")); Serial.print(requestMethod); Serial.print(F(" * ")); Serial.print(requestUrl); Serial.println();
-		#endif
+		DB_P_HttpServer(F("HttpServer.dispatchEvent: ")); DB_P_HttpServer(requestMethod); DB_P_HttpServer(F(" * ")); DB_P_HttpServer(requestUrl); DB_PLN_HttpServer();
 
 		if (onCommandReceived == NULL) {
 			return;
@@ -156,22 +163,13 @@ public:
 		}
 	}
 
-	void write(const char* s) {
-		int n = strlen_P(s);
-		int k = 0;
-		char buf[64];
-		while (k < n) {
-			int l = k + 64 <= n ? 64 : n - k;
-			memcpy_P(buf, s + k, l);
-			activeClient->write((uint8_t*) buf, l);
-			k += l;
-		}
-	}
-
-
 protected:
 
 	Client* activeClient;
+
+	char* lineBuff[8];
+
+	int lineBuffSize[8];
 
 };
 

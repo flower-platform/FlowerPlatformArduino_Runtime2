@@ -5,6 +5,10 @@
 #ifndef FlowerPlatformArduinoRuntime_h
 #define FlowerPlatformArduinoRuntime_h
 
+#include <avr/pgmspace.h>
+#include <Print.h>
+#include <stdint.h>
+
 #define DEBUG_FP 0
 
 class Event { };
@@ -47,39 +51,16 @@ int freeRam() {
 	return (int) &v - (__brkval == 0 ? (int) &__heap_start : (int) __brkval);
 }
 
-//	int freeRam() {
-//		 int size = 8192; // Use 2048 with ATmega328
-//		  byte *buf;
-//
-//		  while ((buf = (byte *) malloc(--size)) == NULL) ;
-//
-//		  free(buf);
-//
-//		  return size;
-//	}
-
-
-/*
-class DataChangedEvent : public Event {
-	public:
-		String attribute;
-		String previousValue;
-		String currentValue;
-};
-
-class DataSetChangedEvent : public Event {
-	public:
-		std::vector<DataSetEntry> dataSet;
-};
-
-class DataSetEntry {
-	public:
-		DataSetEntry(String attribute, String value);
-		String attribute;
-		String value;
-};
-*/
-
-// int EventDispatcher::nextEventType = 0;
+void write_P(Print* p, const char* s, int BUF_SIZE = 64) {
+	int n = strlen_P(s);
+	int k = 0;
+	char buf[BUF_SIZE];
+	while (k < n) {
+		int l = k + BUF_SIZE <= n ? BUF_SIZE : n - k;
+		memcpy_P(buf, s + k, l);
+		p->write((uint8_t*) buf, l);
+		k += l;
+	}
+}
 
 #endif
