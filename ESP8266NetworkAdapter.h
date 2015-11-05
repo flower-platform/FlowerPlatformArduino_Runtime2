@@ -20,7 +20,7 @@
 #include <WString.h>
 
 #define esp Serial1
-#define MAX_CLIENTS 3
+#define MAX_CLIENTS 2
 #define READ_BUFFER_SIZE 64
 #define WRITE_TIMEOUT 3000
 #define READ_TIMEOUT 1500
@@ -70,6 +70,10 @@ public:
 
 	uint8_t buf[READ_BUFFER_SIZE];
 
+	size_t bytesExpected;
+
+	long lastRead; // timestamp of last read operation
+
 	int bufSt, bufEn;	// start and end indexes in buffer
 
 	bool stopped = true;
@@ -109,18 +113,15 @@ public:
 
 	static const int WRITE_STATUS_WAITING_FOR_SEND_OK = 3;
 
+	// parsers for module's command responses
 	static CharSequenceParser readyParser;
-
 	static CharSequenceParser okParser;
-
-	static CharSequenceParser connectParser;
-
-	static CharSequenceParser disconnectParser;
-
 	static CharSequenceParser okToWriteParser;
-
 	static CharSequenceParser sendOkParser;
 
+	// parsers for module's events
+	static CharSequenceParser connectParser;
+	static CharSequenceParser disconnectParser;
 	static CharSequenceParser ipdParser;
 
 	const char* ssid;
@@ -131,9 +132,11 @@ public:
 
 	ESP8266Client clients[MAX_CLIENTS];
 
-	uint8_t clientsToCloseStack[8];
+	uint8_t extraClientsStack[8];	// stack holding id's of extra connections (when there are more than MAX_CLIENTS connections)
 
-	uint8_t clientsToCloseStackIndex = 0;
+	uint8_t extraClientsSP;	// stack pointer
+
+	ESP8266Client* recvClient;	// active receiver
 
 	void setup();
 
@@ -141,7 +144,7 @@ public:
 
 	int readNextChar(); // reads and processes the next char from ESP8266's serial port
 
-	void closeClients();
+	void closeInactiveClients();
 
 	int writeStatus;
 
@@ -202,6 +205,7 @@ int ESP8266Client::read() {
 
 // accumulates one byte into the read buffer
 bool ESP8266Client::accumulate(uint8_t b) {
+	bytesExpected--;
 	if (bufSt == bufEn) {
 		// reset buffer indexes
 		bufSt = 0;
@@ -241,7 +245,7 @@ void ESP8266Client::flush() {	}
 
 CharSequenceParser ESP8266NetworkAdapter::readyParser("\r\nready\r\n");
 
-CharSequenceParser ESP8266NetworkAdapter::okParser("\r\nOK\r\n");
+CharSequenceParser ESP8266NetworkAdapter::okParser("OK\r\n");
 
 CharSequenceParser ESP8266NetworkAdapter::connectParser("?,CONNECT");
 
@@ -258,6 +262,7 @@ void ESP8266NetworkAdapter::setup() {
 		clients[i].clientId = i;
 		clients[i].networkAdapter = this;
 	}
+	extraClientsSP = 0;
 
 	esp.begin(115200);
 	char c;
@@ -274,6 +279,9 @@ void ESP8266NetworkAdapter::setup() {
 	while ((c = esp.read()) != '\n');
 
 	esp.println(F("AT+CIPMUX=1"));
+	while ((c = esp.read()) == -1 || !okParser.parseNextChar(c));
+
+	esp.println(F("AT+CIPSTO=3"));
 	while ((c = esp.read()) == -1 || !okParser.parseNextChar(c));
 
 	esp.println(F("AT+CWDHCP=1,1"));
@@ -300,14 +308,21 @@ void ESP8266NetworkAdapter::loop() {
 	}
 	while (esp.available()) {
 		readNextChar();
+		if (!esp.available()) {
+			// give some time to get over possible congestion
+			delay(10);
+		}
 	}
-	closeClients();
+
+	closeInactiveClients();
+
+	// dispatch events
 	for (uint8_t i = 0; i < MAX_CLIENTS; i++) {
 		ESP8266Client* client = &clients[i];
 		if (client->available()) {
 			if (client->connected()) {
 				httpServer->processClientRequest(client, client->clientId);
-			} else {
+			} else if (!client->stopped) {
 				client->stop();
 			}
 		}
@@ -321,10 +336,6 @@ int ESP8266NetworkAdapter::readNextChar() {
 
 	char c = esp.read();
 	Serial.write(c);
-//	Serial.print("(");
-//	Serial.print((int) c);
-//	Serial.print(")");
-	Serial.print(".");
 
 	if (okToWriteParser.parseNextChar(c)) {
 		writeStatus = WRITE_STATUS_TRANSMIT_READY;
@@ -332,7 +343,7 @@ int ESP8266NetworkAdapter::readNextChar() {
 
 	if (sendOkParser.parseNextChar(c)) {
 		writeStatus = WRITE_STATUS_READY;
-		closeClients();
+		closeInactiveClients();
 	}
 
 	if (connectParser.parseNextChar(c)) {
@@ -342,7 +353,7 @@ int ESP8266NetworkAdapter::readNextChar() {
 			ESP8266Client* client = &clients[clientId];
 			client->reset();
 		} else {
-			clientsToCloseStack[clientsToCloseStackIndex++] = clientId;
+			extraClientsStack[extraClientsSP++] = clientId;
 		}
 	}
 
@@ -369,26 +380,27 @@ int ESP8266NetworkAdapter::readNextChar() {
 		int availableBytes = atoi(params + strlen(params) + 1);
 		Serial.print("--------> "); Serial.print(clientId); Serial.print(" "); Serial.print(availableBytes); Serial.print(" "); Serial.println(writeStatus);
 		ESP8266Client* client = clientId < MAX_CLIENTS ? &clients[clientId] : NULL;
-		long t = millis();
-		while (availableBytes > 0) {
-			while (!esp.available());	// wait for data
+		if (client) {
+			recvClient = client;
+			recvClient->bytesExpected = availableBytes;
+			while (!esp.available());	// wait for next char
 			c = esp.read();
-			availableBytes--;
-			if (client != NULL && client->connected()) {
-				client->accumulate(c);
-			}
 		}
-//		if (client != NULL) {
-//			Serial.write((char*) &client->buf, READ_BUFFER_SIZE);
-//		}
-		Serial.print("--------> data buf "); Serial.println(availableBytes);
 	}
+
+	if (recvClient != NULL) {
+		if (!recvClient->accumulate(c) || recvClient->bytesExpected <= 0) {
+			recvClient = NULL;
+		}
+	}
+
 	return writeStatus;
 }
 
-void ESP8266NetworkAdapter::closeClients() {
-//	ESP8266Client client;
-//	client.networkAdapter = this;
+void ESP8266NetworkAdapter::closeInactiveClients() {
+	// Serial.println("closeClients()");
+
+	// Close stopped clients
 	for (uint8_t i = 0; i < MAX_CLIENTS; i++) {
 		if (clients[i].stopped && !clients[i].closed) {
 			Serial.print("Closing client "); Serial.println(i);
@@ -399,17 +411,16 @@ void ESP8266NetworkAdapter::closeClients() {
 			Serial.print("Closed client "); Serial.println(i);
 		}
 	}
-	while (clientsToCloseStackIndex > 0) {
-		uint8_t clientId = clientsToCloseStack[--clientsToCloseStackIndex];
+
+	// Close extra clients
+	while (extraClientsSP > 0) {
+		uint8_t clientId = extraClientsStack[--extraClientsSP];
 		Serial.print("Closing client "); Serial.println(clientId);
-//		client.clientId = clientId;
-//		client.closed = false;
-//		write_P(&client, PSTR("HTTP/1.1 404 Not Found\r\nRefresh: 5;url=.\r\n\r\n"));
 		delay(20);
 		write_P(&esp, PSTR("AT+CIPCLOSE=")); esp.println(clientId);
 		delay(20);
-
 		Serial.print("Closed client "); Serial.println(clientId);
 	}
 }
+
 #endif
