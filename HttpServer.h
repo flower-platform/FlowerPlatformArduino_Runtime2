@@ -53,16 +53,11 @@ public:
 
 	}
 
-	void processClientRequest(Client* client, uint8_t clientId) {
+	void processClientRequest(Client* client) {
 		activeClient = client;
 
 		DB_PLN_HttpServer("data received");
 
-//		if (lineBuff[clientId] == NULL) {
-//			lineBuff[clientId] = new char[LINE_BUFFER_SIZE];
-//			lineBuffSize[clientId] = 0;
-//			DB_PLN_HttpServer("lineBuff allocated");
-//		}
 		char currentLine[LINE_BUFFER_SIZE];
 		uint8_t lineSize = 0;
 

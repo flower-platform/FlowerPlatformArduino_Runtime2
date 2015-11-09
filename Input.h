@@ -27,8 +27,10 @@ public:
 		pinMode(pin, INPUT);
 		if (internalPullUp) {
 			digitalWrite(pin, HIGH);
+			lastValue = HIGH;
+		} else {
+			lastValue = LOW;
 		}
-		lastValue = -1;
 	}
 
 	void loop() {

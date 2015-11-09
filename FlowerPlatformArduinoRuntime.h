@@ -77,7 +77,7 @@ size_t write(Print* p, uint8_t* s, size_t size, int BUF_SIZE = 64) {
 }
 
 
-#define BUFFERED_PRINT_BUFFER_SIZE 1024
+#define BUFFERED_PRINT_BUFFER_SIZE 128
 class BufferedPrint : public Print {
 public:
 

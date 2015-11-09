@@ -2,7 +2,7 @@
 #define LoggerSD_h
 
 #include <Arduino.h>
-#include <pins_arduino.h>
+#include <ArduinoFiles.h>
 #include <stdbool.h>
 #include <stdint.h>
 #include <SD.h>

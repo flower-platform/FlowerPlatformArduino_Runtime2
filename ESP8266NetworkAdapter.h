@@ -5,25 +5,15 @@
 #ifndef ESP8266NetworkAdapter_h
 #define ESP8266NetworkAdapter_h
 
-#include <avr/pgmspace.h>
 #include <Arduino.h>
 #include <Client.h>
-#include <FlowerPlatformArduinoRuntime.h>
-#include <HardwareSerial.h>
 #include <HttpServer.h>
-#include <IPAddress.h>
-#include <stdbool.h>
-#include <stddef.h>
-#include <stdint.h>
-#include <stdlib.h>
-#include <string.h>
-#include <WString.h>
+
 
 #define esp Serial1
-#define MAX_CLIENTS 2
+#define MAX_CLIENTS 3
 #define READ_BUFFER_SIZE 64
 #define WRITE_TIMEOUT 3000
-#define READ_TIMEOUT 1500
 
 class CharSequenceParser {
 public:
@@ -51,7 +41,7 @@ public:
 		return false;
 	}
 
-	char wildcardValue;
+	char wildcardValue; // stores the char corresponding to the last wildcard character
 
 protected:
 	const char* sequence;
@@ -68,21 +58,21 @@ public:
 
 	uint8_t clientId;
 
-	uint8_t buf[READ_BUFFER_SIZE];
+	uint8_t buf[READ_BUFFER_SIZE];	// read buffer
 
-	size_t bytesExpected;
+	size_t bytesExpected;	// number of bytes promised by the ESP8266 module
 
 	long lastRead; // timestamp of last read operation
 
 	int bufSt, bufEn;	// start and end indexes in buffer
 
-	bool stopped = true;
+	bool stopped = true;	// flag set when stop() method is called; used as a mark for closing the connection
 
-	bool closed = true;
+	bool closed = true;		// flag is set when a DISCONNECTED event is received (the socket is closed)
 
-	bool accumulate(uint8_t b);
+	bool accumulate(uint8_t b);	// tries to accumulate on byte in the buffer; returns whether the byte was accumulated or not (when buffer is full)
 
-	void reset();
+	void reset();	// resets buffer head and tail; marks the client as active (closed=false, stopped=false)
 
 	int connect(IPAddress ip, uint16_t port);
 	int connect(const char *host, uint16_t port);
@@ -105,12 +95,10 @@ public:
 class ESP8266NetworkAdapter {
 public:
 
+	// write status constants
 	static const int WRITE_STATUS_READY = 0;
-
 	static const int WRITE_STATUS_WAITING_FOR_TRANSMIT_READY = 1;
-
 	static const int WRITE_STATUS_TRANSMIT_READY = 2;
-
 	static const int WRITE_STATUS_WAITING_FOR_SEND_OK = 3;
 
 	// parsers for module's command responses
@@ -132,7 +120,7 @@ public:
 
 	ESP8266Client clients[MAX_CLIENTS];
 
-	uint8_t extraClientsStack[8];	// stack holding id's of extra connections (when there are more than MAX_CLIENTS connections)
+	uint8_t extraClientsStack[8];	// stack holding ids of extra connections (when there are more than MAX_CLIENTS connections)
 
 	uint8_t extraClientsSP;	// stack pointer
 
@@ -142,15 +130,11 @@ public:
 
 	void loop();
 
-	int readNextChar(); // reads and processes the next char from ESP8266's serial port
+	int readNextChar(); // reads a char from ESP8266 and processes it
 
-	void closeInactiveClients();
+	void closeInactiveClients();	// closes the clients marked to be closed ("stopped") and the extra connections
 
 	int writeStatus;
-
-	uint8_t disconnectQueue[8];
-
-	uint8_t disconnectQueueIndex;
 
 };
 
@@ -203,7 +187,6 @@ int ESP8266Client::read() {
 	return buf[bufSt++];
 }
 
-// accumulates one byte into the read buffer
 bool ESP8266Client::accumulate(uint8_t b) {
 	bytesExpected--;
 	if (bufSt == bufEn) {
@@ -268,25 +251,33 @@ void ESP8266NetworkAdapter::setup() {
 	char c;
 
 	Serial.println("start");
+
+	// reset ESP8266
 	esp.println(F("AT+RST"));
 	while ((c = esp.read()) == -1 || !readyParser.parseNextChar(c));
 	Serial.println("reset");
 
+	// echo off
 	esp.println(F("ATE0"));
 	while ((c = esp.read()) == -1 || !okParser.parseNextChar(c));
 
+	// set WiFi mode to client only
 	esp.println(F("AT+CWMODE=1"));
 	while ((c = esp.read()) != '\n');
 
+	// set mux mode to multi
 	esp.println(F("AT+CIPMUX=1"));
 	while ((c = esp.read()) == -1 || !okParser.parseNextChar(c));
 
+	// set server timeout (3s)
 	esp.println(F("AT+CIPSTO=3"));
 	while ((c = esp.read()) == -1 || !okParser.parseNextChar(c));
 
+	// disable DHCP
 	esp.println(F("AT+CWDHCP=1,1"));
 	while ((c = esp.read()) == -1 || !okParser.parseNextChar(c));
 
+	// set static IP address
 	esp.print(F("AT+CIPSTA=\""));
 	esp.print(httpServer->ipAddress[0]); esp.print(".");
 	esp.print(httpServer->ipAddress[1]); esp.print(".");
@@ -294,10 +285,12 @@ void ESP8266NetworkAdapter::setup() {
 	esp.print(httpServer->ipAddress[3]); esp.println("\"");
 	while ((c = esp.read()) == -1 || !okParser.parseNextChar(c));
 
+	// enable "server" mode
 	esp.print(F("AT+CIPSERVER=1,")); esp.print(httpServer->port); esp.println();
 	while ((c = esp.read()) == -1 || !okParser.parseNextChar(c));
 
-	esp.print(F("AT+CWJAP=\"")); esp.print(ssid); esp.print(F("\",\"")); esp.print(password); esp.println("\""); // join AP
+	// join AP
+	esp.print(F("AT+CWJAP=\"")); esp.print(ssid); esp.print(F("\",\"")); esp.print(password); esp.println("\"");
 	while ((c = esp.read()) == -1 || !okParser.parseNextChar(c));
 
 }
@@ -321,7 +314,7 @@ void ESP8266NetworkAdapter::loop() {
 		ESP8266Client* client = &clients[i];
 		if (client->available()) {
 			if (client->connected()) {
-				httpServer->processClientRequest(client, client->clientId);
+				httpServer->processClientRequest(client);
 			} else if (!client->stopped) {
 				client->stop();
 			}
