@@ -5,11 +5,7 @@
 #ifndef FlowerPlatformArduinoRuntime_h
 #define FlowerPlatformArduinoRuntime_h
 
-#include <avr/pgmspace.h>
 #include <Print.h>
-#include <stddef.h>
-#include <stdint.h>
-#include <string.h>
 
 #define DEBUG_FP 0
 
@@ -48,12 +44,13 @@ public:
 };
 
 int freeRam() {
-	extern int __heap_start, *__brkval;
-	int v;
-	return (int) &v - (__brkval == 0 ? (int) &__heap_start : (int) __brkval);
+//	extern int __heap_start, *__brkval;
+//	int v;
+//	return (int) &v - (__brkval == 0 ? (int) &__heap_start : (int) __brkval);
+	return 0;
 }
 
-size_t write_P(Print* p, const char* s, int BUF_SIZE = 64) {
+size_t write_P(Print* p, const char* s, int BUF_SIZE = 512) {
 	size_t n = strlen_P(s);
 	size_t k = 0;
 	char buf[BUF_SIZE];
@@ -66,7 +63,7 @@ size_t write_P(Print* p, const char* s, int BUF_SIZE = 64) {
 	return n;
 }
 
-size_t write(Print* p, uint8_t* s, size_t size, int BUF_SIZE = 64) {
+size_t write(Print* p, uint8_t* s, size_t size, int BUF_SIZE = 512) {
 	size_t k = 0;
 	while (k < size) {
 		size_t l = k + BUF_SIZE <= size ? BUF_SIZE : size - k;
@@ -77,7 +74,7 @@ size_t write(Print* p, uint8_t* s, size_t size, int BUF_SIZE = 64) {
 }
 
 
-#define BUFFERED_PRINT_BUFFER_SIZE 128
+#define BUFFERED_PRINT_BUFFER_SIZE 512
 class BufferedPrint : public Print {
 public:
 

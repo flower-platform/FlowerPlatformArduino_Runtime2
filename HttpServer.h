@@ -5,15 +5,12 @@
 #ifndef HttpServer_h
 #define HttpServer_h
 
-#include <avr/pgmspace.h>
 #include <Client.h>
 #include <FlowerPlatformArduinoRuntime.h>
 #include <HardwareSerial.h>
-#include <stdint.h>
-#include <string.h>
 #include <WString.h>
 
-//#define DEBUG_HttpServer
+#define DEBUG_HttpServer
 #ifdef DEBUG_HttpServer
 #define DB_P_HttpServer(text) Serial.print(text)
 #define DB_PLN_HttpServer(text) Serial.println(text)
@@ -56,13 +53,16 @@ public:
 	void processClientRequest(Client* client) {
 		activeClient = client;
 
-		DB_PLN_HttpServer("data received");
+		DB_P_HttpServer("data received");
+		DB_P_HttpServer(' '); DB_P_HttpServer(client->available());
+		DB_P_HttpServer(' '); DB_PLN_HttpServer(client->connected());
 
 		char currentLine[LINE_BUFFER_SIZE];
 		uint8_t lineSize = 0;
 
 		while (client->connected() && client->available()) {
 			char c = client->read();
+			DB_P_HttpServer("|"); DB_P_HttpServer(c);
 			if (c == '\n') {
 				currentLine[lineSize] = '\0';
 
