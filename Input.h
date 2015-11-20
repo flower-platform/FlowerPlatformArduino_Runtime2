@@ -20,7 +20,6 @@ public:
 	bool internalPullUp = false;
 	bool isAnalog = false;
 
-
 	void setup() {
 		pinMode(pin, INPUT);
 		if (internalPullUp) {
