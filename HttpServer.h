@@ -10,7 +10,6 @@
 #include <HardwareSerial.h>
 #include <WString.h>
 
-#define DEBUG_HttpServer
 #ifdef DEBUG_HttpServer
 #define DB_P_HttpServer(text) Serial.print(text)
 #define DB_PLN_HttpServer(text) Serial.println(text)

@@ -16,7 +16,7 @@ public:
 	Listener* onValueChanged = NULL;
 
 	uint8_t pin;
-	int pollInterval = 200;
+	int pollInterval = 50;
 	bool internalPullUp = false;
 	bool isAnalog = false;
 
@@ -40,7 +40,7 @@ public:
 		if (value == lastValue) {
 	    	return;
 	    }
-		if (!isAnalog && (unsigned long int)(millis() - lastTime) < pollInterval) {
+		if (!isAnalog && millis() - lastTime < pollInterval) {
 			return;
 		}
 
