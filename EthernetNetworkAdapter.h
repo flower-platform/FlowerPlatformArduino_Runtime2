@@ -30,8 +30,8 @@ public:
 	void loop() {
 		// listen for incoming clients
 		EthernetClient client = server->available();
-
 		if (client) {
+			Serial.println(client);
 			httpServer->processClientRequest(&client);
 		}
 	}

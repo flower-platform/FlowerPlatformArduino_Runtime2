@@ -5,12 +5,7 @@
 #ifndef FlowerPlatformArduinoRuntime_h
 #define FlowerPlatformArduinoRuntime_h
 
-#include <avr/pgmspace.h>
 #include <Print.h>
-#include <stdbool.h>
-#include <stddef.h>
-#include <stdint.h>
-#include <string.h>
 
 #ifdef ESP8266
 extern "C" {

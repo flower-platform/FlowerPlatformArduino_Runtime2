@@ -5,21 +5,15 @@
 #ifndef ESP8266NetworkAdapter_h
 #define ESP8266NetworkAdapter_h
 
-#include <avr/pgmspace.h>
+#include <FlowerPlatformArduinoRuntime.h>
+#include <HttpServer.h>
 #include <Arduino.h>
 #include <Client.h>
-#include <FlowerPlatformArduinoRuntime.h>
 #include <HardwareSerial.h>
-#include <HttpServer.h>
 #include <IPAddress.h>
-#include <stdbool.h>
-#include <stddef.h>
-#include <stdint.h>
-#include <stdlib.h>
-#include <string.h>
-#include <WString.h>
 
-#define DEBUG_ESP8266NetworkAdapter
+
+//#define DEBUG_ESP8266NetworkAdapter
 
 #ifdef DEBUG_ESP8266NetworkAdapter
 #define DB_P_ESP8266NetworkAdapter(text) Serial.print(text)
@@ -137,6 +131,8 @@ public:
 	static CharSequenceParser disconnectParser;
 	static CharSequenceParser ipdParser;
 
+	bool accessPointMode = false;
+
 	const char* ssid;
 
 	const char* password;
@@ -183,7 +179,7 @@ size_t ESP8266Client::write(const uint8_t* buf, size_t size) {
 
 	unsigned long writeDeadline;
 
-	esp.print(F("AT+CIPSEND=")); esp.print(clientId); esp.print(','); esp.print(size); esp.print("\r\n"); // prepare for transmission
+	esp.print(F("AT+CIPSENDBUF=")); esp.print(clientId); esp.print(','); esp.print(size); esp.print("\r\n"); // prepare for transmission
 
 	networkAdapter->writeStatus = ESP8266NetworkAdapter::WRITE_STATUS_WAITING_FOR_TRANSMIT_READY;
 	writeDeadline = millis() + WRITE_TIMEOUT;
@@ -296,58 +292,71 @@ void ESP8266NetworkAdapter::setup() {
 
 	delay(1000); // wait for ESP to boot up
 
+	DB_PLN_ESP8266NetworkAdapter(F("ESP setup"));
+
 	esp.begin(115200);
 	char c;
-
-	DB_PLN_ESP8266NetworkAdapter("start");
 
 	// reset ESP8266
 	esp.println(F("AT+RST"));
 	while ((c = esp.read()) == -1 || !readyParser.parseNextChar(c));
-	DB_PLN_ESP8266NetworkAdapter("reset");
 
 	// echo off
 	esp.println(F("ATE0"));
 	while ((c = esp.read()) == -1 || !okParser.parseNextChar(c));
 
-	// set WiFi mode to client only
-	esp.println(F("AT+CWMODE=1"));
-	while ((c = esp.read()) != '\n');
-
-	// set mux mode to multi
-	esp.println(F("AT+CIPMUX=1"));
+	// set WiFi mode
+	esp.print(F("AT+CWMODE_CUR=")); esp.println(accessPointMode ? 2 : 1);
 	while ((c = esp.read()) == -1 || !okParser.parseNextChar(c));
 
-	// set server timeout (3s); we don't rely on this
-	esp.println(F("AT+CIPSTO=3"));
-	while ((c = esp.read()) == -1 || !okParser.parseNextChar(c));
-
-	// disable DHCP
-	esp.println(F("AT+CWDHCP=1,1"));
-	while ((c = esp.read()) == -1 || !okParser.parseNextChar(c));
+//	 DHCP settings (disable)
+//	esp.println(F("AT+CWDHCP=0,0"));
+//	while ((c = esp.read()) == -1 || !okParser.parseNextChar(c));
 
 	// set static IP address
-	esp.print(F("AT+CIPSTA=\""));
+	esp.print(accessPointMode ? F("AT+CIPAP_CUR=\"") : F("AT+CIPSTA_CUR=\""));
 	esp.print(httpServer->ipAddress[0]); esp.print(".");
 	esp.print(httpServer->ipAddress[1]); esp.print(".");
 	esp.print(httpServer->ipAddress[2]); esp.print(".");
 	esp.print(httpServer->ipAddress[3]); esp.println("\"");
 	while ((c = esp.read()) == -1 || !okParser.parseNextChar(c));
 
-	// enable "server" mode
+	// access point mode setting (either set up as AP, or join an AP)
+	esp.print(accessPointMode ? F("AT+CWSAP_CUR=\"") : F("AT+CWJAP_CUR=\""));
+	esp.print(ssid); esp.print(F("\",\"")); esp.print(password); esp.print("\"");
+	if (accessPointMode) {
+		esp.print(",1,4"); // channel 1 works fine; other channels don't
+	}
+	esp.println();
+	while ((c = esp.read()) == -1 || !okParser.parseNextChar(c));
+
+
+
+	// set mux mode to multi
+	esp.println(F("AT+CIPMUX=1"));
+	while ((c = esp.read()) == -1 || !okParser.parseNextChar(c));
+
+	//	// set server timeout (3s); we don't rely on this
+	//	esp.println(F("AT+CIPSTO=3"));
+	//	while ((c = esp.read()) == -1 || !okParser.parseNextChar(c))  { if (c != -1) Serial.print(c); }
+	//	DB_PLN_ESP8266NetworkAdapter(F("set timeout"));
+
+	// open port (server socket)
 	esp.print(F("AT+CIPSERVER=1,")); esp.print(httpServer->port); esp.println();
 	while ((c = esp.read()) == -1 || !okParser.parseNextChar(c));
 
-	// join AP
-	esp.print(F("AT+CWJAP=\"")); esp.print(ssid); esp.print(F("\",\"")); esp.print(password); esp.println("\"");
-	while ((c = esp.read()) == -1 || !okParser.parseNextChar(c));
+
+	DB_PLN_ESP8266NetworkAdapter(F("ESP setup ready"));
 
 }
 
 void ESP8266NetworkAdapter::loop() {
+	#ifdef DEBUG_ESP8266NetworkAdapter
 	while (Serial.available()) {
 		esp.write(Serial.read());
 	}
+	#endif
+
 	while (esp.available()) {
 		readNextChar();
 	}
@@ -378,10 +387,11 @@ int ESP8266NetworkAdapter::readNextChar() {
 
 	char c = esp.read();
 
-	// TODO debug
+	#ifdef DEBUG_ESP8266NetworkAdapter
 	if (recvClient == NULL) {
 		Serial.write(c);
 	}
+	#endif
 
 	if (okToWriteParser.parseNextChar(c)) {
 		writeStatus = WRITE_STATUS_TRANSMIT_READY;
